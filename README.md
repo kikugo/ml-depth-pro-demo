@@ -12,7 +12,7 @@ license: other
 
 # Depth Pro - AI Depth Map Generator
 
-> **Note:** This is a personal project to try out Apple's ml-depth-pro model. After getting it working locally with easy-to-use scripts, I decided to publish it so anyone else interested can try it too. The core model and logic are from the original Apple repository. The original license is retained.
+> **Note:** This is a personal project to try out official Apple's [ml-depth-pro](https://github.com/apple/ml-depth-pro) model. After getting it working locally with easy-to-use scripts, I decided to publish it so anyone else interested can try it too. The core model and logic are from the original Apple repository. The original license is retained.
 
 ---
 
@@ -49,8 +49,6 @@ Transform any 2D image into a detailed 3D depth map using Apple's open-source **
     For Mac: `python run_local_mac.py`
     
     For Windows or Linux: `python run_local_windows_linux.py`
-
-    The application will start at http://127.0.0.1:7860 and open in your browser automatically.
 
 ---
 
