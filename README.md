@@ -10,9 +10,9 @@ pinned: false
 license: other
 ---
 
-# 🎯 Depth Pro - AI Depth Map Generator
+# Depth Pro - AI Depth Map Generator
 
-> **Note:** This repository contains a modified version of the official [Apple/ml-depth-pro](https://github.com/apple/ml-depth-pro) project. The core model and logic are from the original authors. The primary additions are user-friendly local execution scripts (`run_local_mac.py` and `run_local_windows_linux.py`) and an improved README for easier setup. The original license is retained.
+> **Note:** This is a personal project to try out Apple's ml-depth-pro model. After getting it working locally with easy-to-use scripts, I decided to publish it so anyone else interested can try it too. The core model and logic are from the original Apple repository. The original license is retained.
 
 ---
 
@@ -20,80 +20,56 @@ Transform any 2D image into a detailed 3D depth map using Apple's open-source **
 
 ---
 
-## 🚀 Quick Start (Local)
+## Quick Start (Local)
 
-1. **Clone** the repo and enter the directory
+1.  **Clone the repository** and enter the directory:
 
     ```bash
     git clone https://github.com/apple/ml-depth-pro.git depth-pro-demo
     cd depth-pro-demo
     ```
 
-2. **Install dependencies** (Python ≥ 3.10 recommended)
+2.  **Install dependencies** (Python ≥ 3.10 is recommended):
 
     ```bash
     pip install -r requirements.txt
-    # For Apple Silicon you also need a recent PyTorch build with MPS support
     ```
+    *Note: For Apple Silicon, you will need a PyTorch version that supports MPS.*
 
-3. **Download model weights** (≈ 1.8 GB)
+3.  **Download Model Weights** (approx. 1.8 GB):
 
-    The helper scripts will automatically download `depth_pro.pt` on first run, but you can also do it manually:
+    The scripts will automatically download the `depth_pro.pt` file on the first run. You can also download it manually:
 
     ```bash
     curl -L -o depth_pro.pt https://huggingface.co/apple/depth-pro/resolve/main/depth_pro.pt
     ```
 
-4. **Run the demo**
+4.  **Run the Demo**:
 
-    | Platform                     | Command                              |
-    |------------------------------|--------------------------------------|
-    | macOS (Apple Silicon)        | `python run_local_mac.py`            |
-    | Windows or Linux (CUDA/CPU)  | `python run_local_windows_linux.py`  |
+    For Mac: `python run_local_mac.py`
+    
+    For Windows or Linux: `python run_local_windows_linux.py`
 
-    The server starts at <http://127.0.0.1:7860> and opens in your browser automatically.
-
----
-
-## ✨ Features
-
-- 🚀 **GPU accelerated** (MPS or CUDA) – CPU fallback available
-- 🎯 **Metric depth** with absolute scale & focal-length estimation
-- 🔒 **Private** – everything runs locally; no data leaves your machine
-- 🆓 **Open-source** – no API keys or paywalls
+    The application will start at http://127.0.0.1:7860 and open in your browser automatically.
 
 ---
 
-## ℹ️  Scripts
+## Features
 
-| File                           | Description                                                         |
-|--------------------------------|---------------------------------------------------------------------|
-| `run_local_mac.py`             | Optimised for Apple Silicon (MPS). Works on any M-series Mac.        |
-| `run_local_windows_linux.py`   | Works on Windows & Linux. Uses CUDA if available, otherwise CPU.     |
-
-Each script:
-
-1. Checks for **GPU support** (MPS or CUDA) and selects the best device.
-2. Downloads `depth_pro.pt` automatically if it’s missing.
-3. Launches a **Gradio** interface with coloured & grayscale depth maps.
+- **GPU Accelerated**: Optimized for Apple Silicon (MPS) and NVIDIA (CUDA), with a CPU fallback.
+- **Metric Depth**: Predicts true, real-world depth and estimates focal length automatically.
+- **Private**: All processing happens 100% locally on your machine. No data is sent to the cloud.
+- **Open-Source**: Based on Apple's powerful research, free to use without API keys or restrictions.
 
 ---
 
-## 📖 Research
+## Research
 
-Based on the paper:
-
-> **Depth Pro: Sharp Monocular Metric Depth in Less Than a Second** (2024)  
-> A. Bochkovskii, A. Delaunoy, H. Germain, M. Santos, Y. Zhou, S. Richter, and V. Koltun.
+This work is based on the paper "Depth Pro: Sharp Monocular Metric Depth in Less Than a Second" (2024) by A. Bochkovskii, A. Delaunoy, H. Germain, M. Santos, Y. Zhou, S. Richter, and V. Koltun.
 
 ---
 
-## 🤝 Credits
+## Credits
 
-- **Model:** [apple/ml-depth-pro](https://github.com/apple/ml-depth-pro)  
-- **Interface:** [Gradio](https://gradio.app/)  
-- **Icons:** [Twemoji](https://twemoji.twitter.com/)
-
----
-
-*Made with ❤️  for the developer community – enjoy!*
+- **Original Model**: [apple/ml-depth-pro](https://github.com/apple/ml-depth-pro)
+- **UI Framework**: [Gradio](https://gradio.app/)
