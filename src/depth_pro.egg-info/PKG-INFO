@@ -1,0 +1,78 @@
+Metadata-Version: 2.4
+Name: depth_pro
+Version: 0.1
+Summary: Inference/Network/Model code for Apple Depth Pro monocular depth estimation.
+Project-URL: Homepage, https://github.com/apple/ml-depth-pro
+Project-URL: Repository, https://github.com/apple/ml-depth-pro
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: torch
+Requires-Dist: torchvision
+Requires-Dist: timm
+Requires-Dist: numpy<2
+Requires-Dist: pillow_heif
+Requires-Dist: matplotlib
+Dynamic: license-file
+
+---
+title: Depth Pro - AI Depth Maps
+emoji: 🎯
+colorFrom: blue
+colorTo: purple
+sdk: gradio
+sdk_version: 4.0.0
+app_file: app.py
+pinned: false
+license: other
+---
+
+# 🎯 Depth Pro - AI Depth Map Generator
+
+Transform any 2D image into a detailed 3D depth map using Apple's state-of-the-art **Depth Pro** model!
+
+## ✨ Features
+
+- 🚀 **Ultra-fast**: Generate depth maps in ~0.3 seconds
+- 🎯 **High accuracy**: Sharp boundary detection and fine details  
+- 🌐 **Universal**: Works with any image - no camera metadata needed
+- 🆓 **Free**: No usage limits, registration, or API keys required
+- ⚡ **Real-time**: GPU-accelerated processing
+
+## 🔬 How It Works
+
+This space uses Apple's open-source [Depth Pro](https://github.com/apple/ml-depth-pro) model, which represents a breakthrough in monocular depth estimation. The model:
+
+- Predicts **metric depth** with absolute scale
+- Achieves **exceptional sharpness** in depth boundaries  
+- Estimates **focal length** automatically
+- Processes **2.25MP images** in 0.3 seconds
+
+## 🎮 How to Use
+
+1. **Upload** any image (photos of people, objects, landscapes work great!)
+2. **Wait** ~0.3 seconds for processing  
+3. **Download** your depth maps:
+   - **Colored version**: Great for visualization
+   - **Grayscale version**: Perfect for 3D reconstruction
+
+## 🔧 Applications
+
+- **3D Photography**: Create depth-aware photo effects
+- **AR/VR**: Spatial understanding for virtual objects
+- **Robotics**: Navigation and object manipulation  
+- **Film/Gaming**: 3D scene reconstruction
+- **Research**: Computer vision and depth analysis
+
+## 📖 Research
+
+Based on the paper: *"Depth Pro: Sharp Monocular Metric Depth in Less Than a Second"* by Aleksei Bochkovskii, Amaël Delaunoy, Hugo Germain, Marcel Santos, Yichao Zhou, Stephan R. Richter, and Vladlen Koltun.
+
+## 🤝 Credits
+
+- **Model**: [Apple ML Research](https://github.com/apple/ml-depth-pro)
+- **Interface**: Built with [Gradio](https://gradio.app/)  
+- **Hosting**: [HuggingFace Spaces](https://huggingface.co/spaces)
+
+---
+
+*Open source, free to use, and designed for everyone! 🎉*

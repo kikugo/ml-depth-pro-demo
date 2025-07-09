@@ -1,0 +1,10 @@
+# HuggingFace specific
+*.pyc
+__pycache__/
+*.log
+.env
+
+# Large model files (will be downloaded automatically by the app)
+checkpoints/
+*.pth
+*.ckpt 
