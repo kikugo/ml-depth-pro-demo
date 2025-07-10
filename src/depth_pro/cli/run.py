@@ -126,7 +126,7 @@ def main():
         "-i", 
         "--image-path", 
         type=Path, 
-        default="./data/example.jpg",
+        default="./example.png",
         help="Path to input image.",
     )
     parser.add_argument(

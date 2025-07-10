@@ -2,6 +2,8 @@
 
 Transform any 2D image into a detailed 3D depth map using Apple's open-source **Depth Pro** model.
 
+![Example of Depth Pro in action](example.png)
+
 ---
 
 This project provides two easy ways to get started: running simple Python scripts or using an interactive Jupyter Notebook.
