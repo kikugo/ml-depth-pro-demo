@@ -7,4 +7,4 @@ __pycache__/
 # Large model files (will be downloaded automatically by the app)
 checkpoints/
 *.pth
-*.ckpt 
+*.ckpt # Project updated
