@@ -25,7 +25,8 @@ from run import DepthProRunner, _select_device
 SUPPORTED = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".heif", ".heic"}
 
 
-def batch_process(input_dir: Path, output_dir: Path, save_npy: bool = False):
+def batch_process(input_dir: Path, output_dir: Path, save_npy: bool = False,
+                  save_glb: bool = False):
     """Process all images in input_dir, save results to output_dir."""
     images = sorted(
         p for p in input_dir.iterdir() if p.suffix.lower() in SUPPORTED
@@ -49,7 +50,7 @@ def batch_process(input_dir: Path, output_dir: Path, save_npy: bool = False):
         image = Image.open(img_path).convert("RGB")
 
         start = time.time()
-        colour, greyscale, _ = runner.process(image)
+        colour, greyscale, _, _ = runner.process(image)
         elapsed = time.time() - start
         total_time += elapsed
 
@@ -65,6 +66,13 @@ def batch_process(input_dir: Path, output_dir: Path, save_npy: bool = False):
         # Optionally save raw depth as NumPy array
         if save_npy:
             np.save(str(output_dir / f"{stem}_depth.npy"), greyscale)
+
+        # Optionally export .glb mesh
+        if save_glb:
+            glb_path, _, _ = runner.generate_mesh(image, stride=2)
+            if glb_path:
+                import shutil
+                shutil.copy(glb_path, str(output_dir / f"{stem}.glb"))
 
     print(f"\n✅ Done! {len(images)} images processed in {total_time:.1f}s")
     print(f"   Average: {total_time / len(images):.2f}s per image")
@@ -87,13 +95,17 @@ def main():
         "--npy", action="store_true",
         help="Also save raw depth values as .npy files"
     )
+    parser.add_argument(
+        "--glb", action="store_true",
+        help="Also export .glb 3D meshes (AR-ready)"
+    )
     args = parser.parse_args()
 
     if not args.input.is_dir():
         print(f"❌ Input path is not a directory: {args.input}")
         sys.exit(1)
 
-    batch_process(args.input, args.output, save_npy=args.npy)
+    batch_process(args.input, args.output, save_npy=args.npy, save_glb=args.glb)
 
 
 if __name__ == "__main__":
