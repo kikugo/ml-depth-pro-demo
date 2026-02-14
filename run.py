@@ -476,6 +476,32 @@ def create_interface(runner: DepthProRunner):
                     outputs=[pc_plot, pc_info]
                 )
 
+            # ---- Tab 4: Video Depth ---------------------------------------
+            with gr.Tab("🎬 Video"):
+                gr.Markdown(
+                    "Upload a short video to generate a depth-mapped version. "
+                    "**Tip:** Keep videos under 10s for reasonable processing times."
+                )
+                with gr.Row():
+                    vid_input = gr.Video(label="Upload video")
+                    vid_skip = gr.Slider(
+                        minimum=1, maximum=10, value=2, step=1,
+                        label="Process every Nth frame",
+                        info="Higher = faster but choppy",
+                    )
+                vid_output = gr.Video(label="Depth-mapped video")
+                vid_info = gr.Markdown("")
+
+                def _process_video(video, every_n):
+                    if video is None:
+                        return None, ""
+                    return runner.process_video(video, int(every_n))
+
+                gr.Button("▶️ Generate Depth Video", variant="primary").click(
+                    _process_video, inputs=[vid_input, vid_skip],
+                    outputs=[vid_output, vid_info]
+                )
+
         gr.HTML("""
         <div class="footer">
             🤖 Powered by Apple's Depth Pro | 💻 Running locally on your device<br>
