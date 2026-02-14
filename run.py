@@ -338,6 +338,69 @@ class DepthProRunner:
         )
         return str(out_path), info
 
+    # ------------------------------------------------------------------
+    # 3D mesh export
+    # ------------------------------------------------------------------
+    def generate_mesh(self, image: Image.Image, stride: int = 2):
+        """Run inference and export .glb + .obj meshes.
+
+        Returns:
+            (glb_path, obj_path, info_markdown) or (None, None, error)
+        """
+        from mesh_export import MeshExporter
+
+        if image is None:
+            return None, None, "❌ Please upload an image first!"
+
+        if not self.load():
+            return None, None, "❌ Model failed to load."
+
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        start = time.time()
+        tensor = self.transform(image).unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            if self.device.type == "cuda":
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    prediction = self.model.infer(tensor)
+            else:
+                prediction = self.model.infer(tensor)
+
+        depth = prediction["depth"].cpu().numpy().squeeze()
+        focal = float(prediction["focallength_px"])
+        infer_time = time.time() - start
+
+        # Build meshes
+        exporter = MeshExporter(depth, image, focal)
+        tmp = Path(tempfile.gettempdir())
+
+        start = time.time()
+        glb_path = exporter.export_glb(str(tmp / "depth_pro_mesh.glb"), stride)
+        obj_path = exporter.export_obj(str(tmp / "depth_pro_mesh.obj"), stride)
+        export_time = time.time() - start
+
+        mesh = exporter.build_mesh(stride)
+        n_verts = len(mesh.vertices)
+        n_faces = len(mesh.faces)
+
+        info = f"""
+### ✅ 3D Mesh Exported!
+
+- **📐 Vertices**: {n_verts:,}
+- **🔺 Faces**: {n_faces:,}
+- **📏 Stride**: {stride}px (lower = more detail)
+- **⚡ Inference**: {infer_time:.2f}s
+- **📦 Export**: {export_time:.2f}s
+
+**How to view in AR:**
+- **iPhone/iPad**: AirDrop or open the `.glb` file in Files → tap to view in AR
+- **Android**: Open the `.glb` in Google's Scene Viewer
+- **Desktop**: Import into Blender, three.js, or any 3D viewer
+        """
+        return glb_path, obj_path, info
+
 
 # ---------------------------------------------------------------------------
 # Gradio UI
