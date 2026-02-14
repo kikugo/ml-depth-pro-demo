@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """
-Depth Pro - Local Runner (macOS)
-================================
-Run Apple's Depth Pro model locally on Apple Silicon Macs.
+Depth Pro - Local Runner
+========================
+Run Apple's Depth Pro model locally on any platform.
 
-This script automatically selects the best available device:
- - MPS (Apple Silicon GPU) if available
- - CPU fallback otherwise
+Device selection (automatic):
+ 1. MPS  (Apple Silicon GPU)
+ 2. CUDA (NVIDIA GPU)
+ 3. CPU  (fallback)
 
 Usage:
-    python run_local_mac.py
+    python run.py
 
-Make sure you've installed the dependencies:
+Dependencies:
     pip install -r requirements.txt
-
-and downloaded the model weights (depth_pro.pt) into the project root or set
-DEPTH_PRO_WEIGHTS env var to the path.
 """
 
 import os
@@ -29,9 +27,9 @@ import numpy as np
 from PIL import Image
 import torch
 
-# -----------------------------------------------------------------------------
-# Try importing the depth_pro package (installed in editable mode).
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Import depth_pro
+# ---------------------------------------------------------------------------
 try:
     import depth_pro  # type: ignore
 except ImportError:
@@ -40,23 +38,27 @@ except ImportError:
 
 MODEL_AVAILABLE = hasattr(depth_pro, "create_model_and_transforms")
 
-# -----------------------------------------------------------------------------
-# Device selection (Apple Silicon GPU if available)
-# -----------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Device selection
+# ---------------------------------------------------------------------------
 if torch.backends.mps.is_available():
     device = torch.device("mps")
     print("🚀 Using Apple Silicon GPU (MPS)")
+elif torch.cuda.is_available():
+    device = torch.device("cuda")
+    print(f"🚀 Using CUDA GPU ({torch.cuda.get_device_name(0)})")
 else:
     device = torch.device("cpu")
-    print("⚠️  MPS not available – running on CPU. Expect slower performance.")
+    print("⚠️  No GPU available – running on CPU. Expect slower performance.")
 
 # Globals for lazy model loading
 model = None
 transform = None
 load_time = 0.0
 
+
 def download_model_if_needed():
-    """Download the Depth Pro weights if they don't exist in the current dir."""
+    """Download the Depth Pro weights if they don't exist."""
     default_path = Path("depth_pro.pt")
     if default_path.exists():
         return default_path
@@ -64,6 +66,7 @@ def download_model_if_needed():
     url = "https://huggingface.co/apple/depth-pro/resolve/main/depth_pro.pt"
     print("⬇️  depth_pro.pt not found – downloading (1.8 GB)…")
     import urllib.request
+
     with urllib.request.urlopen(url) as response, open(default_path, "wb") as out_file:
         file_size = int(response.getheader("Content-Length", "0"))
         downloaded = 0
@@ -79,6 +82,7 @@ def download_model_if_needed():
     print("\n✅ Model downloaded to depth_pro.pt")
     return default_path
 
+
 def load_model():
     """Load the Depth Pro model the first time it's needed."""
     global model, transform, load_time
@@ -93,25 +97,27 @@ def load_model():
 
     print("🔄 Loading Depth Pro model…")
     start = time.time()
-    model, transform = depth_pro.create_model_and_transforms(weights_path=str(weights_path))
+    model, transform = depth_pro.create_model_and_transforms(
+        weights_path=str(weights_path)
+    )
     model = model.to(device).eval()
 
-    if device.type == "mps":
-        torch.backends.mps.allow_tf32 = True  # micro-optimisation
+    if device.type == "cuda":
+        torch.backends.cudnn.benchmark = True
 
     load_time = time.time() - start
     print(f"✅ Model loaded in {load_time:.1f}s on {device}")
     return True
 
+
 def process_image(image: Image.Image):
-    """Run the model on the given PIL image and return colour & greyscale depth maps + markdown."""
+    """Run the model on a PIL image and return colour & greyscale depth maps."""
     if image is None:
         return None, None, "❌ Please upload an image first!"
 
     if not load_model():
         return None, None, "❌ Model failed to load. Check console for details."
 
-    # Ensure RGB
     if image.mode != "RGB":
         image = image.convert("RGB")
 
@@ -120,8 +126,8 @@ def process_image(image: Image.Image):
     tensor = transform(image).unsqueeze(0).to(device)
 
     with torch.no_grad():
-        if device.type == "mps":
-            with torch.autocast(device_type="cpu", dtype=torch.float16):
+        if device.type == "cuda":
+            with torch.autocast(device_type="cuda", dtype=torch.float16):
                 prediction = model.infer(tensor)
         else:
             prediction = model.infer(tensor)
@@ -137,11 +143,17 @@ def process_image(image: Image.Image):
     depth_colour = cv2.applyColorMap(depth_norm, cv2.COLORMAP_PLASMA)
     depth_colour = cv2.cvtColor(depth_colour, cv2.COLOR_BGR2RGB)
 
+    gpu_label = {
+        "mps": "Apple Silicon MPS",
+        "cuda": f"CUDA ({torch.cuda.get_device_name(0)})" if device.type == "cuda" else "",
+        "cpu": "None (CPU)",
+    }.get(device.type, str(device))
+
     info_md = f"""
 ### ✅ Depth Map Generated Successfully!
 
 - **📏 Image Size**: {image.width} × {image.height}
-- **🔍 Estimated Focal Length**: {focal:.1f} px  
+- **🔍 Estimated Focal Length**: {focal:.1f} px
 - **📊 Depth Range**: {d_min:.2f} m – {d_max:.2f} m
 - **⚡ Processing Time**: {total_time:.3f}s
 - **🎯 Model**: Apple Depth Pro v1.0
@@ -149,7 +161,7 @@ def process_image(image: Image.Image):
 
 **Performance Notes:**
 - **Model Load Time**: {load_time:.1f}s (one-time)
-- **GPU Acceleration**: {'✅' if device.type == 'mps' else '❌'}
+- **GPU Acceleration**: {gpu_label}
 
 **How to use the results:**
 - **Colored Version**: Great for visualisation and analysis
@@ -157,6 +169,7 @@ def process_image(image: Image.Image):
 - **Depth Values**: White = closer, Black = farther
     """
     return depth_colour, depth_norm, info_md
+
 
 def create_interface():
     """Create the Gradio Blocks interface."""
@@ -175,7 +188,7 @@ def create_interface():
         padding-top:1rem; border-top:1px solid #444; }
     """
 
-    with gr.Blocks(title="🎯 Depth Pro - AI Depth Map (macOS)", css=css) as demo:
+    with gr.Blocks(title="🎯 Depth Pro - AI Depth Map", css=css) as demo:
         gr.HTML("""
         <div class="main-header">
             <h1>🎯 Depth Pro - AI Depth Map Generator</h1>
@@ -196,13 +209,15 @@ def create_interface():
         with gr.Row(equal_height=True):
             with gr.Column():
                 gr.HTML("<h3>📤 Upload Your Image</h3>")
-                img_in = gr.Image(label="Drop an image or click to upload", type="pil", height=450)
+                img_in = gr.Image(
+                    label="Drop an image or click to upload", type="pil", height=450
+                )
 
                 gr.HTML("""
                 <div style="margin-top:15px;padding:15px;background:linear-gradient(135deg,#2c2c2e 0%,#1c1c1e 100%);color:#f2f2f7;border:1px solid #444;border-radius:10px;">
                     <strong>💡 Features:</strong>
                     <ul style="margin:10px 0;padding-left:20px;">
-                        <li><strong>🚀 Ultra-fast</strong>: GPU acceleration (MPS)</li>
+                        <li><strong>🚀 Ultra-fast</strong>: GPU acceleration (MPS / CUDA)</li>
                         <li><strong>📸 Any image</strong>: People, objects, landscapes, indoor/outdoor</li>
                         <li><strong>🔥 No limits</strong>: Process unlimited images locally</li>
                         <li><strong>🔒 Private</strong>: All processing happens locally</li>
@@ -219,14 +234,15 @@ def create_interface():
 
         info = gr.Markdown("⌛ Load an image to begin…")
 
-        img_in.change(process_image, inputs=img_in, outputs=[img_out_col, img_out_gray, info])
+        img_in.change(
+            process_image, inputs=img_in, outputs=[img_out_col, img_out_gray, info]
+        )
 
         gr.HTML("""
         <div class="footer">
             🤖 Powered by Apple's Depth Pro | 💻 Running locally on your device<br>
             Research: "Depth Pro: Sharp Monocular Metric Depth in Less Than a Second" (2024)<br>
-            Performance: MPS acceleration • Zero network latency<br>
-            🔒 Private processing • 🚀 Local inference • ⚡ Apple Silicon optimised
+            🔒 Private processing • 🚀 Local inference
         </div>
         """)
 
@@ -234,11 +250,11 @@ def create_interface():
 
 
 def main():
-    print("🚀 Starting Depth Pro (macOS)…")
-    load_model()  # warm-up, optional
+    print("🚀 Starting Depth Pro…")
+    load_model()  # warm-up
     demo = create_interface()
     demo.launch(server_name="127.0.0.1", server_port=7860, share=False, inbrowser=True)
 
 
 if __name__ == "__main__":
-    main() 
+    main()
