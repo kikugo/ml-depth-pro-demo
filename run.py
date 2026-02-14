@@ -260,6 +260,84 @@ class DepthProRunner:
         )
         return fig, f"✅ Point cloud generated ({min(n, max_points):,} points)"
 
+    # ------------------------------------------------------------------
+    # Video depth
+    # ------------------------------------------------------------------
+    def process_video(self, video_path: str, every_n: int = 1):
+        """Process a video file and return a depth-mapped version.
+
+        Args:
+            video_path: path to input video
+            every_n: process every Nth frame (1 = all frames)
+
+        Returns:
+            (output_video_path, info_string)
+        """
+        if video_path is None:
+            return None, "❌ Please upload a video first!"
+
+        if not self.load():
+            return None, "❌ Model failed to load."
+
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            return None, "❌ Could not open video file."
+
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+        out_path = Path(tempfile.gettempdir()) / "depth_pro_video.mp4"
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        out = cv2.VideoWriter(str(out_path), fourcc, fps / every_n, (w, h))
+
+        processed = 0
+        start = time.time()
+
+        frame_idx = 0
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+
+            if frame_idx % every_n == 0:
+                pil_img = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                tensor = self.transform(pil_img).unsqueeze(0).to(self.device)
+
+                with torch.no_grad():
+                    if self.device.type == "cuda":
+                        with torch.autocast(device_type="cuda", dtype=torch.float16):
+                            pred = self.model.infer(tensor)
+                    else:
+                        pred = self.model.infer(tensor)
+
+                depth = pred["depth"].cpu().numpy().squeeze()
+                d_min, d_max = depth.min(), depth.max()
+                depth_u8 = ((depth - d_min) / (d_max - d_min + 1e-8) * 255).astype(
+                    np.uint8
+                )
+                depth_colour = cv2.applyColorMap(depth_u8, cv2.COLORMAP_PLASMA)
+                depth_colour = cv2.resize(depth_colour, (w, h))
+                out.write(depth_colour)
+                processed += 1
+
+                if processed % 10 == 0:
+                    print(f"   Processed {processed} frames…")
+
+            frame_idx += 1
+
+        cap.release()
+        out.release()
+        elapsed = time.time() - start
+
+        info = (
+            f"✅ Video processed: **{processed}** frames in **{elapsed:.1f}s** "
+            f"({processed / elapsed:.1f} FPS)  \n"
+            f"Resolution: {w}×{h} | Original FPS: {fps:.0f}"
+        )
+        return str(out_path), info
+
 
 # ---------------------------------------------------------------------------
 # Gradio UI
