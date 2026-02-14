@@ -88,3 +88,39 @@ class WebcamDepthRunner:
         self.runner = DepthProRunner(device)
         return self.runner.load()
 
+    # ------------------------------------------------------------------
+    # Inference
+    # ------------------------------------------------------------------
+    def _infer_frame(self, frame_bgr: np.ndarray):
+        """Run depth estimation on a single frame."""
+        # Convert to PIL RGB for the model
+        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+        pil_img = Image.fromarray(frame_rgb)
+        pil_img.thumbnail((1024, 1024))  # Limit max resolution for speed
+
+        # Run inference using the runner's transform and model directly for speed
+        # (skipping the full process() wrapper to avoid overhead)
+        start = time.time()
+        tensor = self.runner.transform(pil_img).unsqueeze(0).to(self.runner.device)
+
+        with torch.no_grad():
+            if self.runner.device.type == "cuda":
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    pred = self.runner.model.infer(tensor)
+            else:
+                pred = self.runner.model.infer(tensor)
+
+        depth = pred["depth"].cpu().numpy().squeeze()
+        inference_time = time.time() - start
+
+        # Update FPS
+        self._frame_times.append(time.time())
+        if len(self._frame_times) > 10:
+            self._frame_times.pop(0)
+        if len(self._frame_times) > 1:
+            self._fps = len(self._frame_times) / (
+                self._frame_times[-1] - self._frame_times[0]
+            )
+
+        return depth, inference_time
+
