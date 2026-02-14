@@ -124,3 +124,90 @@ class WebcamDepthRunner:
 
         return depth, inference_time
 
+    # ------------------------------------------------------------------
+    # Main Loop
+    # ------------------------------------------------------------------
+    def run(self):
+        """Start the live webcam loop."""
+        if not self._init_camera() or not self._init_model():
+            return
+
+        print("\n🚀 Live Webcam Mode Started")
+        print("   Controls: [SPACE] Pause  [C] Color  [S] Screenshot  [Q] Quit")
+
+        cv2.namedWindow("Depth Pro - Live", cv2.WINDOW_NORMAL)
+
+        while True:
+            # Handle key presses
+            key = cv2.waitKey(1) & 0xFF
+            if key == ord("q") or key == 27:  # q or ESC
+                break
+            elif key == ord(" ") or key == 32:  # SPACE
+                self.paused = not self.paused
+            elif key == ord("c"):
+                self.colormap_idx = (self.colormap_idx + 1) % len(COLORMAPS)
+            elif key == ord("s"):
+                self._save_screenshot(combined)
+
+            if not self.paused:
+                ret, frame = self.cap.read()
+                if not ret:
+                    print("❌ Lost camera feed.")
+                    break
+                self.last_frame = frame
+            else:
+                frame = self.last_frame
+
+            # Inference
+            depth, infer_time = self._infer_frame(frame)
+
+            # Visualisation
+            d_min, d_max = depth.min(), depth.max()
+            depth_u8 = ((depth - d_min) / (d_max - d_min + 1e-8) * 255).astype(np.uint8)
+            
+            cmap_name, cmap_id = COLORMAPS[self.colormap_idx]
+            depth_color = cv2.applyColorMap(depth_u8, cmap_id)
+            
+            # Resize depth to match frame if needed (should be same, but just in case)
+            if depth_color.shape[:2] != frame.shape[:2]:
+                depth_color = cv2.resize(depth_color, (frame.shape[1], frame.shape[0]))
+
+            # Side-by-side display
+            combined = np.hstack((frame, depth_color))
+
+            # Overlay info
+            h, w = combined.shape[:2]
+            overlay = combined.copy()
+            
+            # Text overlay
+            info_lines = [
+                f"FPS: {self._fps:.1f}",
+                f"Infer: {infer_time*1000:.1f}ms",
+                f"Map: {cmap_name}",
+                "PAUSED" if self.paused else "",
+            ]
+            
+            for i, line in enumerate(info_lines):
+                if not line: continue
+                y = 30 + i * 30
+                cv2.putText(overlay, line, (20, y), cv2.FONT_HERSHEY_SIMPLEX, 
+                            0.7, (0, 0, 0), 4)
+                cv2.putText(overlay, line, (20, y), cv2.FONT_HERSHEY_SIMPLEX, 
+                            0.7, (255, 255, 255), 2)
+
+            # Combine overlay
+            cv2.addWeighted(overlay, 1.0, combined, 0.0, 0, combined)
+            
+            cv2.imshow("Depth Pro - Live", combined)
+
+        self.cap.release()
+        cv2.destroyAllWindows()
+        print("👋 Webcam mode ended.")
+
+    def _save_screenshot(self, image):
+        """Save the current view to a file."""
+        ts = int(time.time())
+        filename = f"screenshot_{ts}.jpg"
+        cv2.imwrite(filename, image)
+        print(f"📸 Saved {filename}")
+
