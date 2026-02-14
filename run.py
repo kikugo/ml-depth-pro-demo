@@ -17,6 +17,7 @@ Dependencies:
 """
 
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -174,7 +175,12 @@ class DepthProRunner:
 - **Grayscale Version**: Use for 3D reconstruction, depth-based effects
 - **Depth Values**: White = closer, Black = farther
         """
-        return depth_colour, depth_norm, info
+
+        # Save raw depth to a temp .npy for download
+        npy_path = Path(tempfile.gettempdir()) / "depth_pro_latest.npy"
+        np.save(str(npy_path), depth)
+
+        return depth_colour, depth_norm, info, str(npy_path)
 
 
 # ---------------------------------------------------------------------------
@@ -241,10 +247,23 @@ def create_interface(runner: DepthProRunner):
                 gr.HTML("<h3>⚫ Grayscale Depth Map</h3>")
                 img_out_gray = gr.Image(height=450)
 
-        info = gr.Markdown("⌛ Load an image to begin…")
+        with gr.Row():
+            info = gr.Markdown("⌛ Load an image to begin…")
+            npy_download = gr.File(
+                label="📥 Download raw depth (.npy)", visible=False
+            )
+
+        def _on_image(image):
+            result = runner.process(image)
+            if result[0] is None:
+                return result[0], result[1], result[2], gr.update(visible=False)
+            return result[0], result[1], result[2], gr.update(
+                value=result[3], visible=True
+            )
 
         img_in.change(
-            runner.process, inputs=img_in, outputs=[img_out_col, img_out_gray, info]
+            _on_image, inputs=img_in,
+            outputs=[img_out_col, img_out_gray, info, npy_download]
         )
 
         gr.HTML("""
