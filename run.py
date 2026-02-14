@@ -225,50 +225,54 @@ def create_interface(runner: DepthProRunner):
         </div>
         """)
 
-        with gr.Row(equal_height=True):
-            with gr.Column():
-                gr.HTML("<h3>📤 Upload Your Image</h3>")
-                img_in = gr.Image(
-                    label="Drop an image or click to upload", type="pil", height=450
+        with gr.Tabs():
+            # ---- Tab 1: Depth Map -----------------------------------------
+            with gr.Tab("🖼️ Depth Map"):
+                with gr.Row(equal_height=True):
+                    with gr.Column():
+                        gr.HTML("<h3>📤 Upload Your Image</h3>")
+                        img_in = gr.Image(
+                            label="Drop an image or click to upload",
+                            type="pil", height=450,
+                        )
+
+                        gr.HTML("""
+                        <div style="margin-top:15px;padding:15px;background:linear-gradient(135deg,#2c2c2e 0%,#1c1c1e 100%);color:#f2f2f7;border:1px solid #444;border-radius:10px;">
+                            <strong>💡 Features:</strong>
+                            <ul style="margin:10px 0;padding-left:20px;">
+                                <li><strong>🚀 Ultra-fast</strong>: GPU acceleration (MPS / CUDA)</li>
+                                <li><strong>📸 Any image</strong>: People, objects, landscapes, indoor/outdoor</li>
+                                <li><strong>🔥 No limits</strong>: Process unlimited images locally</li>
+                                <li><strong>🔒 Private</strong>: All processing happens locally</li>
+                            </ul>
+                        </div>
+                        """)
+
+                    with gr.Column():
+                        gr.HTML("<h3>🎨 Colored Depth Map</h3>")
+                        img_out_col = gr.Image(height=450)
+                    with gr.Column():
+                        gr.HTML("<h3>⚫ Grayscale Depth Map</h3>")
+                        img_out_gray = gr.Image(height=450)
+
+                with gr.Row():
+                    info = gr.Markdown("⌛ Load an image to begin…")
+                    npy_download = gr.File(
+                        label="📥 Download raw depth (.npy)", visible=False
+                    )
+
+                def _on_image(image):
+                    result = runner.process(image)
+                    if result[0] is None:
+                        return result[0], result[1], result[2], gr.update(visible=False)
+                    return result[0], result[1], result[2], gr.update(
+                        value=result[3], visible=True
+                    )
+
+                img_in.change(
+                    _on_image, inputs=img_in,
+                    outputs=[img_out_col, img_out_gray, info, npy_download]
                 )
-
-                gr.HTML("""
-                <div style="margin-top:15px;padding:15px;background:linear-gradient(135deg,#2c2c2e 0%,#1c1c1e 100%);color:#f2f2f7;border:1px solid #444;border-radius:10px;">
-                    <strong>💡 Features:</strong>
-                    <ul style="margin:10px 0;padding-left:20px;">
-                        <li><strong>🚀 Ultra-fast</strong>: GPU acceleration (MPS / CUDA)</li>
-                        <li><strong>📸 Any image</strong>: People, objects, landscapes, indoor/outdoor</li>
-                        <li><strong>🔥 No limits</strong>: Process unlimited images locally</li>
-                        <li><strong>🔒 Private</strong>: All processing happens locally</li>
-                    </ul>
-                </div>
-                """)
-
-            with gr.Column():
-                gr.HTML("<h3>🎨 Colored Depth Map</h3>")
-                img_out_col = gr.Image(height=450)
-            with gr.Column():
-                gr.HTML("<h3>⚫ Grayscale Depth Map</h3>")
-                img_out_gray = gr.Image(height=450)
-
-        with gr.Row():
-            info = gr.Markdown("⌛ Load an image to begin…")
-            npy_download = gr.File(
-                label="📥 Download raw depth (.npy)", visible=False
-            )
-
-        def _on_image(image):
-            result = runner.process(image)
-            if result[0] is None:
-                return result[0], result[1], result[2], gr.update(visible=False)
-            return result[0], result[1], result[2], gr.update(
-                value=result[3], visible=True
-            )
-
-        img_in.change(
-            _on_image, inputs=img_in,
-            outputs=[img_out_col, img_out_gray, info, npy_download]
-        )
 
         gr.HTML("""
         <div class="footer">
