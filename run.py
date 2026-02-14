@@ -16,7 +16,6 @@ Dependencies:
     pip install -r requirements.txt
 """
 
-import os
 import sys
 import time
 from pathlib import Path
@@ -36,142 +35,152 @@ except ImportError:
     print("❌ depth_pro module not found. Did you run `pip install -e .` inside the cloned repo?")
     sys.exit(1)
 
-MODEL_AVAILABLE = hasattr(depth_pro, "create_model_and_transforms")
 
 # ---------------------------------------------------------------------------
 # Device selection
 # ---------------------------------------------------------------------------
-if torch.backends.mps.is_available():
-    device = torch.device("mps")
-    print("🚀 Using Apple Silicon GPU (MPS)")
-elif torch.cuda.is_available():
-    device = torch.device("cuda")
-    print(f"🚀 Using CUDA GPU ({torch.cuda.get_device_name(0)})")
-else:
-    device = torch.device("cpu")
+def _select_device() -> torch.device:
+    if torch.backends.mps.is_available():
+        print("🚀 Using Apple Silicon GPU (MPS)")
+        return torch.device("mps")
+    if torch.cuda.is_available():
+        print(f"🚀 Using CUDA GPU ({torch.cuda.get_device_name(0)})")
+        return torch.device("cuda")
     print("⚠️  No GPU available – running on CPU. Expect slower performance.")
-
-# Globals for lazy model loading
-model = None
-transform = None
-load_time = 0.0
+    return torch.device("cpu")
 
 
-def download_model_if_needed():
-    """Download the Depth Pro weights if they don't exist."""
-    default_path = Path("depth_pro.pt")
-    if default_path.exists():
-        return default_path
+class DepthProRunner:
+    """Manages model lifecycle and inference."""
 
-    url = "https://huggingface.co/apple/depth-pro/resolve/main/depth_pro.pt"
-    print("⬇️  depth_pro.pt not found – downloading (1.8 GB)…")
-    import urllib.request
+    def __init__(self, device: torch.device):
+        self.device = device
+        self.model = None
+        self.transform = None
+        self.load_time = 0.0
 
-    with urllib.request.urlopen(url) as response, open(default_path, "wb") as out_file:
-        file_size = int(response.getheader("Content-Length", "0"))
-        downloaded = 0
-        chunk_size = 8192
-        while True:
-            chunk = response.read(chunk_size)
-            if not chunk:
-                break
-            out_file.write(chunk)
-            downloaded += len(chunk)
-            progress = downloaded / file_size * 100
-            print(f"\r   {progress:5.1f}%", end="", flush=True)
-    print("\n✅ Model downloaded to depth_pro.pt")
-    return default_path
+    # ------------------------------------------------------------------
+    # Model management
+    # ------------------------------------------------------------------
+    @staticmethod
+    def download_weights() -> Path:
+        """Download the Depth Pro weights if they don't exist."""
+        weights = Path("depth_pro.pt")
+        if weights.exists():
+            return weights
 
+        url = "https://huggingface.co/apple/depth-pro/resolve/main/depth_pro.pt"
+        print("⬇️  depth_pro.pt not found – downloading (1.8 GB)…")
+        import urllib.request
 
-def load_model():
-    """Load the Depth Pro model the first time it's needed."""
-    global model, transform, load_time
-    if model is not None:
+        with urllib.request.urlopen(url) as resp, open(weights, "wb") as f:
+            total = int(resp.getheader("Content-Length", "0"))
+            done = 0
+            while True:
+                chunk = resp.read(8192)
+                if not chunk:
+                    break
+                f.write(chunk)
+                done += len(chunk)
+                print(f"\r   {done / total * 100:5.1f}%", end="", flush=True)
+        print("\n✅ Model downloaded to depth_pro.pt")
+        return weights
+
+    def load(self) -> bool:
+        """Load the model (lazy, only runs once)."""
+        if self.model is not None:
+            return True
+
+        if not hasattr(depth_pro, "create_model_and_transforms"):
+            print("❌ depth_pro module does not expose create_model_and_transforms().")
+            return False
+
+        weights_path = self.download_weights()
+
+        print("🔄 Loading Depth Pro model…")
+        start = time.time()
+        self.model, self.transform = depth_pro.create_model_and_transforms(
+            weights_path=str(weights_path)
+        )
+        self.model = self.model.to(self.device).eval()
+
+        if self.device.type == "cuda":
+            torch.backends.cudnn.benchmark = True
+
+        self.load_time = time.time() - start
+        print(f"✅ Model loaded in {self.load_time:.1f}s on {self.device}")
         return True
 
-    if not MODEL_AVAILABLE:
-        print("❌ depth_pro module does not expose create_model_and_transforms().")
-        return False
+    # ------------------------------------------------------------------
+    # Inference
+    # ------------------------------------------------------------------
+    def process(self, image: Image.Image):
+        """Run inference and return (colour_map, greyscale_map, info_markdown)."""
+        if image is None:
+            return None, None, "❌ Please upload an image first!"
 
-    weights_path = download_model_if_needed()
+        if not self.load():
+            return None, None, "❌ Model failed to load. Check console for details."
 
-    print("🔄 Loading Depth Pro model…")
-    start = time.time()
-    model, transform = depth_pro.create_model_and_transforms(
-        weights_path=str(weights_path)
-    )
-    model = model.to(device).eval()
+        if image.mode != "RGB":
+            image = image.convert("RGB")
 
-    if device.type == "cuda":
-        torch.backends.cudnn.benchmark = True
+        start = time.time()
+        tensor = self.transform(image).unsqueeze(0).to(self.device)
 
-    load_time = time.time() - start
-    print(f"✅ Model loaded in {load_time:.1f}s on {device}")
-    return True
+        with torch.no_grad():
+            if self.device.type == "cuda":
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    prediction = self.model.infer(tensor)
+            else:
+                prediction = self.model.infer(tensor)
 
+        depth = prediction["depth"].cpu().numpy().squeeze()
+        focal = prediction["focallength_px"]
+        elapsed = time.time() - start
 
-def process_image(image: Image.Image):
-    """Run the model on a PIL image and return colour & greyscale depth maps."""
-    if image is None:
-        return None, None, "❌ Please upload an image first!"
+        # Normalise to 0–255 for visualisation
+        d_min, d_max = depth.min(), depth.max()
+        depth_norm = ((depth - d_min) / (d_max - d_min) * 255).astype(np.uint8)
+        depth_colour = cv2.applyColorMap(depth_norm, cv2.COLORMAP_PLASMA)
+        depth_colour = cv2.cvtColor(depth_colour, cv2.COLOR_BGR2RGB)
 
-    if not load_model():
-        return None, None, "❌ Model failed to load. Check console for details."
+        gpu_label = {
+            "mps": "Apple Silicon MPS",
+            "cuda": (
+                f"CUDA ({torch.cuda.get_device_name(0)})"
+                if self.device.type == "cuda"
+                else ""
+            ),
+            "cpu": "None (CPU)",
+        }.get(self.device.type, str(self.device))
 
-    if image.mode != "RGB":
-        image = image.convert("RGB")
-
-    start_total = time.time()
-
-    tensor = transform(image).unsqueeze(0).to(device)
-
-    with torch.no_grad():
-        if device.type == "cuda":
-            with torch.autocast(device_type="cuda", dtype=torch.float16):
-                prediction = model.infer(tensor)
-        else:
-            prediction = model.infer(tensor)
-
-    depth = prediction["depth"].cpu().numpy().squeeze()
-    focal = prediction["focallength_px"]
-
-    total_time = time.time() - start_total
-
-    # Normalise to 0–255 for visualisation
-    d_min, d_max = depth.min(), depth.max()
-    depth_norm = ((depth - d_min) / (d_max - d_min) * 255).astype(np.uint8)
-    depth_colour = cv2.applyColorMap(depth_norm, cv2.COLORMAP_PLASMA)
-    depth_colour = cv2.cvtColor(depth_colour, cv2.COLOR_BGR2RGB)
-
-    gpu_label = {
-        "mps": "Apple Silicon MPS",
-        "cuda": f"CUDA ({torch.cuda.get_device_name(0)})" if device.type == "cuda" else "",
-        "cpu": "None (CPU)",
-    }.get(device.type, str(device))
-
-    info_md = f"""
+        info = f"""
 ### ✅ Depth Map Generated Successfully!
 
 - **📏 Image Size**: {image.width} × {image.height}
 - **🔍 Estimated Focal Length**: {focal:.1f} px
 - **📊 Depth Range**: {d_min:.2f} m – {d_max:.2f} m
-- **⚡ Processing Time**: {total_time:.3f}s
+- **⚡ Processing Time**: {elapsed:.3f}s
 - **🎯 Model**: Apple Depth Pro v1.0
-- **💻 Device**: {device}
+- **💻 Device**: {self.device}
 
 **Performance Notes:**
-- **Model Load Time**: {load_time:.1f}s (one-time)
+- **Model Load Time**: {self.load_time:.1f}s (one-time)
 - **GPU Acceleration**: {gpu_label}
 
 **How to use the results:**
 - **Colored Version**: Great for visualisation and analysis
 - **Grayscale Version**: Use for 3D reconstruction, depth-based effects
 - **Depth Values**: White = closer, Black = farther
-    """
-    return depth_colour, depth_norm, info_md
+        """
+        return depth_colour, depth_norm, info
 
 
-def create_interface():
+# ---------------------------------------------------------------------------
+# Gradio UI
+# ---------------------------------------------------------------------------
+def create_interface(runner: DepthProRunner):
     """Create the Gradio Blocks interface."""
     css = """
     .gradio-container {
@@ -235,7 +244,7 @@ def create_interface():
         info = gr.Markdown("⌛ Load an image to begin…")
 
         img_in.change(
-            process_image, inputs=img_in, outputs=[img_out_col, img_out_gray, info]
+            runner.process, inputs=img_in, outputs=[img_out_col, img_out_gray, info]
         )
 
         gr.HTML("""
@@ -249,10 +258,15 @@ def create_interface():
     return demo
 
 
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
 def main():
     print("🚀 Starting Depth Pro…")
-    load_model()  # warm-up
-    demo = create_interface()
+    device = _select_device()
+    runner = DepthProRunner(device)
+    runner.load()  # warm-up
+    demo = create_interface(runner)
     demo.launch(server_name="127.0.0.1", server_port=7860, share=False, inbrowser=True)
 
 
