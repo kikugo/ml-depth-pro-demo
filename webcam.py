@@ -59,3 +59,32 @@ class WebcamDepthRunner:
         # FPS tracking
         self._frame_times = []
         self._fps = 0.0
+
+    # ------------------------------------------------------------------
+    # Initialization
+    # ------------------------------------------------------------------
+    def _init_camera(self) -> bool:
+        """Open the webcam and configure resolution."""
+        self.cap = cv2.VideoCapture(self.camera_index)
+        if not self.cap.isOpened():
+            print(f"❌ Could not open camera {self.camera_index}")
+            return False
+
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.req_width)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.req_height)
+
+        actual_w = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_h = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        cam_fps = self.cap.get(cv2.CAP_PROP_FPS) or 30.0
+
+        print(f"📷 Camera opened: {actual_w}×{actual_h} @ {cam_fps:.0f}fps")
+        return True
+
+    def _init_model(self) -> bool:
+        """Load the Depth Pro model via DepthProRunner."""
+        from run import DepthProRunner, _select_device
+
+        device = _select_device()
+        self.runner = DepthProRunner(device)
+        return self.runner.load()
+
