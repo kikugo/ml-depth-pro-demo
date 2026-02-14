@@ -37,7 +37,23 @@ Works on **Mac**, **Windows**, and **Linux** — the script auto-detects your GP
 
 ---
 
-## Option 2: Run with Jupyter Notebook (Universal)
+## Option 2: Batch Processing (CLI)
+
+Process an entire folder of images from the command line:
+
+```bash
+python batch.py --input ./photos --output ./depth_maps
+```
+
+Add `--npy` to also save raw depth values as NumPy arrays:
+
+```bash
+python batch.py -i ./photos -o ./depth_maps --npy
+```
+
+---
+
+## Option 3: Run with Jupyter Notebook (Universal)
 
 Use the `Depth_Pro_Universal.ipynb` notebook for an interactive experience that works everywhere.
 
@@ -53,6 +69,9 @@ Use the `Depth_Pro_Universal.ipynb` notebook for an interactive experience that 
 - **Metric Depth**: Predicts true, real-world depth and estimates focal length automatically.
 - **Private**: All processing happens 100% locally on your machine.
 - **Cross-Platform**: Single script works on Mac (MPS), Windows/Linux (CUDA), or CPU.
+- **Batch Processing**: Process entire folders from the CLI with progress tracking.
+- **Raw Depth Export**: Download `.npy` depth arrays for 3D reconstruction or custom processing.
+- **Dark/Light Mode**: Gradio UI follows your system theme preference.
 - **Open-Source**: Based on Apple's powerful research, free to use without API keys.
 
 ---
