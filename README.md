@@ -53,6 +53,8 @@ python batch.py -i ./photos -o ./depth_maps --npy
 
 ---
 
+---
+
 ## Option 3: Run with Jupyter Notebook (Universal)
 
 Use the `Depth_Pro_Universal.ipynb` notebook for an interactive experience that works everywhere.
@@ -61,6 +63,20 @@ Use the `Depth_Pro_Universal.ipynb` notebook for an interactive experience that 
 -   **Where to Run**:
     -   **Google Colab**: Upload the notebook, and it will set up the environment for you.
     -   **Local Jupyter**: Run `jupyter notebook Depth_Pro_Universal.ipynb` in the project directory.
+
+---
+
+## Option 4: Live Webcam Mode 🚀
+
+Run real-time depth estimation on your camera feed:
+
+```bash
+python webcam.py
+```
+
+- **GPU Recommended**: Use CUDA or MPS for best performance.
+- **Controls**: `SPACE` to pause, `S` for screenshot, `C` to change colormap.
+
 ---
 
 ## Features
@@ -69,6 +85,7 @@ Use the `Depth_Pro_Universal.ipynb` notebook for an interactive experience that 
 - **Metric Depth**: Predicts true, real-world depth and estimates focal length automatically.
 - **Private**: All processing happens 100% locally on your machine.
 - **Cross-Platform**: Single script works on Mac (MPS), Windows/Linux (CUDA), or CPU.
+- **Live Webcam**: Real-time depth preview from your camera with `webcam.py`.
 - **Batch Processing**: Process entire folders from the CLI with progress tracking.
 - **Raw Depth Export**: Download `.npy` depth arrays for 3D reconstruction or custom processing.
 - **3D Point Cloud**: Interactive 3D visualization from depth maps using Plotly.
