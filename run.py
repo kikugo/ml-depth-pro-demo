@@ -203,7 +203,11 @@ def create_interface(runner: DepthProRunner):
         padding-top:1rem; border-top:1px solid #444; }
     """
 
-    with gr.Blocks(title="🎯 Depth Pro - AI Depth Map", css=css) as demo:
+    with gr.Blocks(
+        title="🎯 Depth Pro - AI Depth Map",
+        css=css,
+        theme=gr.themes.Soft(),
+    ) as demo:
         gr.HTML("""
         <div class="main-header">
             <h1>🎯 Depth Pro - AI Depth Map Generator</h1>
