@@ -182,6 +182,84 @@ class DepthProRunner:
 
         return depth_colour, depth_norm, info, str(npy_path)
 
+    # ------------------------------------------------------------------
+    # 3D point cloud
+    # ------------------------------------------------------------------
+    def generate_point_cloud(self, image: Image.Image, max_points: int = 50_000):
+        """Generate an interactive 3D point cloud from an image.
+
+        Returns a Plotly figure or an error string.
+        """
+        import plotly.graph_objects as go
+
+        if image is None:
+            return None, "❌ Please upload an image first!"
+
+        if not self.load():
+            return None, "❌ Model failed to load."
+
+        if image.mode != "RGB":
+            image = image.convert("RGB")
+
+        tensor = self.transform(image).unsqueeze(0).to(self.device)
+
+        with torch.no_grad():
+            if self.device.type == "cuda":
+                with torch.autocast(device_type="cuda", dtype=torch.float16):
+                    prediction = self.model.infer(tensor)
+            else:
+                prediction = self.model.infer(tensor)
+
+        depth = prediction["depth"].cpu().numpy().squeeze()
+        focal = float(prediction["focallength_px"])
+        h, w = depth.shape
+
+        # Build pixel grid
+        u, v = np.meshgrid(np.arange(w), np.arange(h))
+        cx, cy = w / 2.0, h / 2.0
+
+        # Back-project to 3D
+        z = depth
+        x = (u - cx) * z / focal
+        y = (v - cy) * z / focal
+
+        # Flatten + downsample for performance
+        x, y, z = x.ravel(), y.ravel(), z.ravel()
+        img_arr = np.array(image.resize((w, h)))
+        r, g, b = (
+            img_arr[:, :, 0].ravel(),
+            img_arr[:, :, 1].ravel(),
+            img_arr[:, :, 2].ravel(),
+        )
+
+        n = len(x)
+        if n > max_points:
+            idx = np.random.choice(n, max_points, replace=False)
+            x, y, z, r, g, b = x[idx], y[idx], z[idx], r[idx], g[idx], b[idx]
+
+        colors = [f"rgb({ri},{gi},{bi})" for ri, gi, bi in zip(r, g, b)]
+
+        fig = go.Figure(
+            data=[
+                go.Scatter3d(
+                    x=x, y=-y, z=-z,  # flip Y/Z for natural orientation
+                    mode="markers",
+                    marker=dict(size=1.2, color=colors, opacity=0.8),
+                )
+            ]
+        )
+        fig.update_layout(
+            scene=dict(
+                xaxis_title="X", yaxis_title="Y", zaxis_title="Depth",
+                aspectmode="data",
+                bgcolor="rgb(20,20,20)",
+            ),
+            paper_bgcolor="rgb(20,20,20)",
+            margin=dict(l=0, r=0, t=30, b=0),
+            height=600,
+        )
+        return fig, f"✅ Point cloud generated ({min(n, max_points):,} points)"
+
 
 # ---------------------------------------------------------------------------
 # Gradio UI
