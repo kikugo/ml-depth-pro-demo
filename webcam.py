@@ -211,3 +211,29 @@ class WebcamDepthRunner:
         cv2.imwrite(filename, image)
         print(f"📸 Saved {filename}")
 
+
+message = """
+Usage:
+    python webcam.py [options]
+
+Options:
+    --camera <int>    Camera index (default: 0)
+    --width <int>     Request width (default: 640)
+    --height <int>    Request height (default: 480)
+"""
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Depth Pro Live Webcam")
+    parser.add_argument("--camera", type=int, default=0, help="Camera index")
+    parser.add_argument("--width", type=int, default=640, help="Request width")
+    parser.add_argument("--height", type=int, default=480, help="Request height")
+
+    args = parser.parse_args()
+
+    runner = WebcamDepthRunner(
+        camera_index=args.camera, width=args.width, height=args.height
+    )
+    runner.run()
+
