@@ -565,6 +565,45 @@ def create_interface(runner: DepthProRunner):
                     outputs=[vid_output, vid_info]
                 )
 
+            # ---- Tab 5: AR/3D Export --------------------------------------
+            with gr.Tab("📦 AR Export"):
+                gr.Markdown(
+                    "Export your depth map as a **3D mesh** (.glb / .obj) "
+                    "for AR viewing on phones or importing into Blender.\n\n"
+                    "**📱 AR Viewing:** Open the downloaded `.glb` file on your "
+                    "iPhone/iPad to view in AR, or use Android's Scene Viewer."
+                )
+                with gr.Row():
+                    mesh_input = gr.Image(
+                        label="Upload an image", type="pil", height=300
+                    )
+                    mesh_stride = gr.Slider(
+                        minimum=1, maximum=8, value=2, step=1,
+                        label="Mesh quality (stride)",
+                        info="1 = full detail (slow), 4+ = fast preview",
+                    )
+                with gr.Row():
+                    mesh_glb = gr.File(label="📥 Download .glb (AR-ready)", visible=False)
+                    mesh_obj = gr.File(label="📥 Download .obj (Blender)", visible=False)
+                mesh_info = gr.Markdown("")
+
+                def _export_mesh(image, stride):
+                    if image is None:
+                        return gr.update(visible=False), gr.update(visible=False), ""
+                    glb, obj, info = runner.generate_mesh(image, int(stride))
+                    if glb is None:
+                        return gr.update(visible=False), gr.update(visible=False), info
+                    return (
+                        gr.update(value=glb, visible=True),
+                        gr.update(value=obj, visible=True),
+                        info,
+                    )
+
+                gr.Button("📦 Generate 3D Mesh", variant="primary").click(
+                    _export_mesh, inputs=[mesh_input, mesh_stride],
+                    outputs=[mesh_glb, mesh_obj, mesh_info]
+                )
+
         gr.HTML("""
         <div class="footer">
             🤖 Powered by Apple's Depth Pro | 💻 Running locally on your device<br>
