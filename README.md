@@ -6,32 +6,30 @@ Transform any 2D image into a detailed 3D depth map using Apple's open-source **
 
 ---
 
-This project provides two easy ways to get started: running simple Python scripts or using an interactive Jupyter Notebook.
+This project provides two easy ways to get started: a Python script with a Gradio UI, or an interactive Jupyter Notebook.
 
-## Option 1: Run with Python Scripts (Local)
+## Option 1: Run with Python (Local)
 
-This is the most straightforward way to run the model on your local machine.
+Works on **Mac**, **Windows**, and **Linux** — the script auto-detects your GPU.
 
 1.  **Clone the repository**:
     ```bash
-    git clone https://github.com/apple/ml-depth-pro.git
-    cd ml-depth-pro
+    git clone https://github.com/kikugo/ml-depth-pro-demo.git
+    cd ml-depth-pro-demo
     ```
 
-2.  **Install dependencies** (Python ≥ 3.10 is recommended):
+2.  **Install dependencies** (Python ≥ 3.10 recommended):
     ```bash
+    pip install -e .
     pip install -r requirements.txt
     ```
-    *Note: For Apple Silicon, you will need a PyTorch version that supports MPS.*
 
-3.  **Download Model Weights** (approx. 1.8 GB):
-    The scripts will automatically download `depth_pro.pt` on the first run.
-
-4.  **Run the Demo**:
-    - For **Mac**: `python run_local_mac.py`
-    - For **Windows/Linux**: `python run_local_windows_linux.py`
-
-    This will launch a local Gradio interface in your browser to process images.
+3.  **Run the Demo**:
+    ```bash
+    python run.py
+    ```
+    Model weights (~1.8 GB) will be downloaded automatically on the first run.
+    This launches a local Gradio interface in your browser.
 
 ---
 
@@ -50,7 +48,7 @@ Use the `Depth_Pro_Universal.ipynb` notebook for an interactive experience that 
 - **GPU Accelerated**: Optimized for Apple Silicon (MPS) and NVIDIA (CUDA), with a CPU fallback.
 - **Metric Depth**: Predicts true, real-world depth and estimates focal length automatically.
 - **Private**: All processing happens 100% locally on your machine.
-- **Two Ways to Run**: Choose between simple command-line scripts or an all-in-one Jupyter Notebook.
+- **Cross-Platform**: Single script works on Mac (MPS), Windows/Linux (CUDA), or CPU.
 - **Open-Source**: Based on Apple's powerful research, free to use without API keys.
 
 ---
@@ -67,5 +65,9 @@ This work is based on the paper "Depth Pro: Sharp Monocular Metric Depth in Less
 ## Credits
 
 - **Original Model**: [apple/ml-depth-pro](https://github.com/apple/ml-depth-pro)
-- **UI Framework (for scripts)**: [Gradio](https://gradio.app/)
+- **UI Framework**: [Gradio](https://gradio.app/)
 - **Notebook Widgets**: [ipywidgets](https://ipywidgets.readthedocs.io/en/latest/)
+
+## License
+
+See [LICENSE](./LICENSE) for details (Apple Sample Code License).
