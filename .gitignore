@@ -1,11 +1,16 @@
-# HuggingFace specific
+# Python
 *.pyc
 __pycache__/
-*.log
+*.egg-info/
+venv/
 .env
 
-# Large model files (will be downloaded automatically by the app)
+# Large model files (downloaded automatically on first run)
 checkpoints/
+*.pt
 *.pth
-*.ckpt # Project updated
-*.egg-info/
+*.ckpt
+
+# OS
+.DS_Store
+*.log
