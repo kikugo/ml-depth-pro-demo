@@ -604,6 +604,44 @@ def create_interface(runner: DepthProRunner):
                     outputs=[mesh_glb, mesh_obj, mesh_info]
                 )
 
+            # ---- Tab 6: Live Webcam ---------------------------------------
+            with gr.Tab("📷 Live Webcam"):
+                gr.Markdown(
+                    "### 🚀 High-Performance Live Mode\n"
+                    "Runs depth estimation on your webcam feed in real-time.\n\n"
+                    "**Controls:**\n"
+                    "- **SPACE**: Pause/Resume\n"
+                    "- **C**: Cycle colormaps (Plasma, Inferno, Viridis...)\n"
+                    "- **S**: Save screenshot\n"
+                    "- **Q**: Quit"
+                )
+                with gr.Row():
+                    cam_idx = gr.Number(label="Camera Index", value=0, precision=0)
+                    cam_res = gr.Dropdown(
+                        label="Resolution",
+                        choices=["640x480", "1280x720", "1920x1080"],
+                        value="640x480",
+                    )
+                
+                cam_btn = gr.Button("🚀 Launch Live Window", variant="primary")
+                cam_out = gr.Markdown("")
+
+                def _launch_webcam(idx, res_str):
+                    try:
+                        w, h = map(int, res_str.split("x"))
+                        import subprocess
+                        subprocess.Popen(
+                            [sys.executable, "webcam.py", "--camera", str(idx),
+                             "--width", str(w), "--height", str(h)]
+                        )
+                        return "✅ Webcam window launched! Check your taskbar."
+                    except Exception as e:
+                        return f"❌ Error launching webcam: {e}"
+
+                cam_btn.click(
+                    _launch_webcam, inputs=[cam_idx, cam_res], outputs=[cam_out]
+                )
+
         gr.HTML("""
         <div class="footer">
             🤖 Powered by Apple's Depth Pro | 💻 Running locally on your device<br>
