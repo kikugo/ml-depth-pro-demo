@@ -16,8 +16,8 @@ dependencies = [
 depth-pro-run = "depth_pro.cli:run_main"
 
 [project.urls]
-Homepage = "https://github.com/apple/ml-depth-pro"
-Repository = "https://github.com/apple/ml-depth-pro"
+Homepage = "https://github.com/kikugo/ml-depth-pro-demo"
+Repository = "https://github.com/kikugo/ml-depth-pro-demo"
 
 [build-system]
 requires = ["setuptools", "setuptools-scm"]
