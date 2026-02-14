@@ -170,3 +170,26 @@ class MeshExporter:
         mesh.export(path, file_type="obj")
         return path
 
+    # ------------------------------------------------------------------
+    # GLB export (AR-ready binary glTF)
+    # ------------------------------------------------------------------
+    def export_glb(self, path: str, stride: int = 2) -> str:
+        """Export the depth map as a .glb file (binary glTF 2.0).
+
+        .glb files can be viewed directly in:
+        - iOS Quick Look (Safari, Files, Messages)
+        - Android Scene Viewer
+        - Windows 3D Viewer
+        - Any WebXR/three.js app
+
+        Args:
+            path: output file path (should end in .glb)
+            stride: mesh density control
+
+        Returns:
+            path to the saved file
+        """
+        mesh = self.build_mesh(stride)
+        mesh.export(path, file_type="glb")
+        return path
+
