@@ -376,6 +376,28 @@ def create_interface(runner: DepthProRunner):
                     outputs=[cmp_original, cmp_depth, cmp_info]
                 )
 
+            # ---- Tab 3: 3D Point Cloud ------------------------------------
+            with gr.Tab("🌐 3D View"):
+                gr.Markdown(
+                    "Upload an image to generate an **interactive 3D point cloud**. "
+                    "Click and drag to rotate, scroll to zoom."
+                )
+                pc_input = gr.Image(
+                    label="Upload an image", type="pil", height=300
+                )
+                pc_plot = gr.Plot(label="3D Point Cloud")
+                pc_info = gr.Markdown("")
+
+                def _point_cloud(image):
+                    if image is None:
+                        return None, ""
+                    return runner.generate_point_cloud(image)
+
+                pc_input.change(
+                    _point_cloud, inputs=pc_input,
+                    outputs=[pc_plot, pc_info]
+                )
+
         gr.HTML("""
         <div class="footer">
             🤖 Powered by Apple's Depth Pro | 💻 Running locally on your device<br>
