@@ -110,3 +110,46 @@ class MeshExporter:
         b = img_arr[v, u, 2].ravel()
         a = np.full_like(r, 255)
         return np.stack([r, g, b, a], axis=-1).astype(np.uint8)
+
+    # ------------------------------------------------------------------
+    # Build full mesh
+    # ------------------------------------------------------------------
+    def build_mesh(self, stride: int = 2):
+        """Build a complete textured mesh from the depth map.
+
+        Args:
+            stride: sample every Nth pixel (1 = full res, 4 = quarter res).
+                    Higher stride → fewer polygons, faster export.
+
+        Returns:
+            trimesh.Trimesh object
+        """
+        import trimesh
+
+        # 1. Build vertex grid
+        vert_grid, u, v = self._build_vertices(stride)
+        rows, cols = vert_grid.shape[0], vert_grid.shape[1]
+        vertices = vert_grid.reshape(-1, 3)
+
+        # 2. Build depth grid at the sampled resolution
+        ys = np.arange(0, self.h, stride)
+        xs = np.arange(0, self.w, stride)
+        u_idx, v_idx = np.meshgrid(xs, ys)
+        depth_grid = self.depth[v_idx, u_idx]
+
+        # 3. Build faces, filtering depth discontinuities
+        faces = self._build_faces(rows, cols, depth_grid)
+        if len(faces) == 0:
+            raise ValueError("No valid faces generated. Try lowering the stride.")
+
+        # 4. Sample colors
+        colors = self._build_vertex_colors(u, v)
+
+        mesh = trimesh.Trimesh(
+            vertices=vertices,
+            faces=faces,
+            vertex_colors=colors,
+            process=False,  # skip auto-processing to keep vertex order
+        )
+        return mesh
+
