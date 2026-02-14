@@ -71,6 +71,9 @@ Use the `Depth_Pro_Universal.ipynb` notebook for an interactive experience that 
 - **Cross-Platform**: Single script works on Mac (MPS), Windows/Linux (CUDA), or CPU.
 - **Batch Processing**: Process entire folders from the CLI with progress tracking.
 - **Raw Depth Export**: Download `.npy` depth arrays for 3D reconstruction or custom processing.
+- **3D Point Cloud**: Interactive 3D visualization from depth maps using Plotly.
+- **Video Depth Maps**: Process short video clips into depth-mapped videos.
+- **Side-by-Side Compare**: View original and depth map side-by-side.
 - **Dark/Light Mode**: Gradio UI follows your system theme preference.
 - **Open-Source**: Based on Apple's powerful research, free to use without API keys.
 
