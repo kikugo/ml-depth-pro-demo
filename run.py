@@ -72,18 +72,18 @@ class DepthProRunner:
         url = "https://huggingface.co/apple/depth-pro/resolve/main/depth_pro.pt"
         print("⬇️  depth_pro.pt not found – downloading (1.8 GB)…")
         import urllib.request
+        from tqdm import tqdm
 
         with urllib.request.urlopen(url) as resp, open(weights, "wb") as f:
             total = int(resp.getheader("Content-Length", "0"))
-            done = 0
-            while True:
-                chunk = resp.read(8192)
-                if not chunk:
-                    break
-                f.write(chunk)
-                done += len(chunk)
-                print(f"\r   {done / total * 100:5.1f}%", end="", flush=True)
-        print("\n✅ Model downloaded to depth_pro.pt")
+            with tqdm(total=total, unit="B", unit_scale=True, desc="Downloading") as pbar:
+                while True:
+                    chunk = resp.read(8192)
+                    if not chunk:
+                        break
+                    f.write(chunk)
+                    pbar.update(len(chunk))
+        print("✅ Model downloaded to depth_pro.pt")
         return weights
 
     def load(self) -> bool:
