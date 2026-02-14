@@ -274,6 +274,30 @@ def create_interface(runner: DepthProRunner):
                     outputs=[img_out_col, img_out_gray, info, npy_download]
                 )
 
+            # ---- Tab 2: Side-by-Side Comparison ---------------------------
+            with gr.Tab("🔀 Compare"):
+                gr.Markdown("Upload an image to see original and depth map side-by-side.")
+                cmp_input = gr.Image(
+                    label="Upload an image", type="pil", height=300
+                )
+                with gr.Row():
+                    cmp_original = gr.Image(label="Original", height=400)
+                    cmp_depth = gr.Image(label="Depth Map (Colored)", height=400)
+                cmp_info = gr.Markdown("")
+
+                def _compare(image):
+                    if image is None:
+                        return None, None, ""
+                    result = runner.process(image)
+                    if result[0] is None:
+                        return None, None, result[2]
+                    return np.array(image), result[0], result[2]
+
+                cmp_input.change(
+                    _compare, inputs=cmp_input,
+                    outputs=[cmp_original, cmp_depth, cmp_info]
+                )
+
         gr.HTML("""
         <div class="footer">
             🤖 Powered by Apple's Depth Pro | 💻 Running locally on your device<br>
