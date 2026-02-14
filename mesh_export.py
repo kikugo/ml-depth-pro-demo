@@ -153,3 +153,20 @@ class MeshExporter:
         )
         return mesh
 
+    # ------------------------------------------------------------------
+    # OBJ export
+    # ------------------------------------------------------------------
+    def export_obj(self, path: str, stride: int = 2) -> str:
+        """Export the depth map as a Wavefront .obj file.
+
+        Args:
+            path: output file path (should end in .obj)
+            stride: mesh density control
+
+        Returns:
+            path to the saved file
+        """
+        mesh = self.build_mesh(stride)
+        mesh.export(path, file_type="obj")
+        return path
+
